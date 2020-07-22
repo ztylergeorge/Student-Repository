@@ -12,10 +12,15 @@ The grades file is analyzed and modifies each individual Student and
 Instructor object 
 The main part of the function asks the user for a _directory path of the 
 University's files and then outputs the results.
+
+Updates 7/21/2020
+Added Major class to read majors for a university
+Major class determines the required courses and remaining courses and electives needed for a student 
+Added GPA output for student 
 @author: Zachary George
 '''
 from collections import defaultdict
-from typing import Dict, Iterator, List, Tuple, DefaultDict
+from typing import Dict, Iterator, List, Tuple, DefaultDict, Optional, Set
 from prettytable import PrettyTable
 import os
     
@@ -55,21 +60,88 @@ def _file_reader(path: str, fields: int, sep: str, header: bool) -> Iterator[Lis
                     yield line.split(sep)
                     
                     
+class Major:
+    
+    
+    """ Defines the attributes and methods of Major Class """
+    
+    
+    def __init__(self, name: str) -> None:     
+        
+        """ Initialize a Major """
+        
+        self.name: str = name
+        self.required_courses: Set[str] = set()
+        self.required_electives: Set[str] = set()
+    
+    def _remaining_courses(self, courses: Dict[str, str], required_courses: Set[str]) -> Set[str]:
+        
+        """ Determine the remaining courses of a student based off of their major """
+        
+        passed_courses: Set[str] = set([key for key in courses if courses[key] in 
+                                        ['A', 'A-', 'B+', 'B', 'B-', 'C+', 'C']])
+        
+        return required_courses.difference(passed_courses)
+    
+    def _remaining_electives(self, courses: Dict[str, str], required_electives: Set[str]) -> Set[str]: 
+        
+        """ Determine the remaining electives of a student based off of their major """
+        
+        passed_courses: Set[str] = set([key for key in courses if courses[key] in 
+                                        ['A', 'A-' 'B+', 'B', 'B-', 'C+', 'C']])
+        
+        if len(passed_courses.intersection(required_electives)) > 0:
+            return {}
+          
+        else:
+            return set(required_electives)
+        
+    def _summary_pretty_table(self) -> PrettyTable:
+        
+        """ Print a pretty table for the student's courses and grades """
+        
+        pt: PrettyTable = PrettyTable(field_names= ['Course', 'R/E?'])
+        
+        for course in self.required_courses:
+            pt.add_row([course, 'R'])
+        
+        for elective in self.required_electives:
+            pt.add_row([elective, 'E'])
+            
+        return pt
+             
+                    
 class Student:
     
     
     """ Defines the attributes and methods of the Student class """
     
-    def __init__(self, cwid: str, name: str, major: str) -> None:
+    def __init__(self, cwid: str, name: str, major: Major) -> None:
         
         """ Define the attributes of a Student object """
         
         self._cwid: str = cwid
         self.name: str = name
-        self.major: str = major
+        self.major: Major = Major(major)
         self._courses_grades: Dict[str, str] = dict() #key: course name value: grade earned
+        self._required_courses: Set[str] = set()
+        self._required_electives: Set[str] = set()
+        self._remaining_courses: Set[str] = set()
+        self._remaining_electives: Set[str] = set()
         
+    def _calculate_gpa(self) -> Optional[float]:
         
+        """ Calculate the GPA for a student """
+        
+        gpa_scale: Dict[str, float] = {'A': 4.0, 'A-': 3.75, 'B+': 3.25, 'B': 3.0, 'B-': 2.75, 'C+': 2.25, 
+                                       'C': 2.0, 'C-': 0, 'D+': 0, 'D': 0, 'D-': 0, 'F': 0}
+        
+        if len(self._courses_grades) == 0:
+            return None
+        else:
+            return round(sum(gpa_scale[key] for key in self._courses_grades.values()) 
+                         / len(self._courses_grades.values()), 2)
+            
     def _summary_pretty_table(self) -> PrettyTable:
         
         """ Print a pretty table for the student's courses and grades """
@@ -109,7 +181,7 @@ class Instructor:
             
         return pt
     
-        
+                  
 class University:
     
     
@@ -125,14 +197,46 @@ class University:
         try:
             os.chdir(_directory)
             self._directory: List[str] = os.listdir(_directory)
+            
         except FileNotFoundError as e:
             raise FileNotFoundError(f'{_directory} could not be opened.') from e
+        
+        self._majors: Dict[str, Major] = self._majors_information() #key: major name value: Major information
+        self.__process_majors()
         
         self._students: Dict[str, Student] = self._students_information() #key: cwid value: Student
         self._instructors: Dict[str, Instructor] = self._instructors_information() #key: cwid value: Instructor
         
         self.__process_grades()
-    
+        
+    def _majors_information(self) -> List[Tuple[str, str, List[str]]]:
+        
+        """ Read the information about majors """
+        
+        majors: Dict[str, Major] = dict() #key: major value: Major
+        
+        if 'majors.txt' in self._directory: 
+            
+            for major in _file_reader('majors.txt', fields=3, sep='\t', header=True):
+                majors[major[0]] = Major(major[0])
+        
+        else:
+            raise ValueError('The majors file does not exist. Please try again.')
+                
+        return majors
+            
+    def __process_majors(self) -> None:
+        
+        """ Process information about the majors """
+        
+        for major in _file_reader('majors.txt', fields=3, sep='\t', header=True):
+            
+            if major[1] == 'R':
+                self._majors[major[0]].required_courses.add(major[2])
+                    
+            if major[1] == 'E':
+                self._majors[major[0]].required_electives.add(major[2])
+                    
     def _students_information(self) -> Dict[str, Student]:
         
         """ Read information about the students """
@@ -141,12 +245,17 @@ class University:
         
         if 'students.txt' in self._directory:
             
-            for cwid, name, major in _file_reader('students.txt', fields=3, sep='\t', header=False):
-                students[cwid] = Student(cwid, name, major)
+            for cwid, name, major in _file_reader('students.txt', fields=3, sep=';', header=True):
+                students[cwid] = Student(cwid, name, self._majors[major].name)
                 
         else:
             raise ValueError('The students file does not exist. Please try again.')
-                      
+        
+        for student in students.values():
+            
+            student._required_courses = self._majors[student.major.name].required_courses
+            student._required_electives = self._majors[student.major.name].required_electives
+                    
         return students
     
     def _instructors_information(self) -> Dict[str, Instructor]:
@@ -157,21 +266,21 @@ class University:
         
         if 'instructors.txt' in self._directory:
             
-            for cwid, name, department in _file_reader('instructors.txt', fields=3, sep='\t', header=False):
+            for cwid, name, department in _file_reader('instructors.txt', fields=3, sep='|', header=True):
                 instructors[cwid] = Instructor(cwid, name, department)
 
         else:
             raise ValueError('The instructors file does not exist. Please try again.')
                          
         return instructors
-            
+                      
     def __process_grades(self) -> None:
         
-        """ Process the grades for each students """     
-        
+        """ Process the grades for each students """
+                 
         if 'grades.txt' in self._directory:
                 
-            for grade in _file_reader('grades.txt', fields=4, sep='\t', header=False):
+            for grade in _file_reader('grades.txt', fields=4, sep='|', header=True):
                 
                 if grade[0] not in self._students:
                     raise ValueError(f'An unidentified student was found: {grade[0]}')
@@ -183,35 +292,57 @@ class University:
                     raise ValueError(f'An unidentified instructor was found: {grade[3]}')
                 
                 else:
-                    self._instructors[grade[3]]._courses_students[grade[1]] += 1                                           
+                    self._instructors[grade[3]]._courses_students[grade[1]] += 1
+                
+            for student in self._students.values():
+                
+                student._remaining_courses = student.major._remaining_courses(student._courses_grades, 
+                                                                              student._required_courses)
+                
+                student._remaining_electives = student.major._remaining_electives(student._courses_grades, 
+                                                                                  student._required_electives)                                                
         else:
             raise ValueError('The grades file does not exist. Please try again.')
-                          
+                  
     def print_students_pt(self) -> None:
         
-        """ Print a prettytable of a student based on a CWID """
+        """ Print a prettytable of students """
         
         print('Student Summary')
-        pt: PrettyTable = PrettyTable(field_names=['CWID', 'Name', 'Completed Courses'])
+        pt: PrettyTable = PrettyTable(field_names=['CWID', 'Name', 'Major', 'Completed Courses', 'Remaining Required', 
+                                                   'Remaining Electives', 'GPA'])
         
         for student in self._students.values():
-            pt.add_row([student.cwid, student.name, sorted(list(student._courses_grades))])
-        print(pt)
-                
+            pt.add_row([student._cwid, student.name, student.major.name, sorted(list(student._courses_grades)), 
+                        student._remaining_courses, student._remaining_electives, student._calculate_gpa()])
+            
+        print(pt)   
                 
     def print_instructors_pt(self) -> None:
         
-        """ Print a prettytable of an instructor based on a CWID """
+        """ Print a prettytable of instructors """
         
         print('Instructor Summary')
         pt: PrettyTable = PrettyTable(field_names=['CWID', 'Name', 
                                                    'Dept', 'Course', 'Students'])
         
         for instructor in self._instructors.values():
-            for i in range(len(instructor.courses_students)):
-                pt.add_row([instructor.cwid, instructor.name, instructor.department, 
-                            list(instructor.courses_students)[i], 
-                            list(instructor.courses_students.values())[i]])
+            for i in range(len(instructor._courses_students)):
+                pt.add_row([instructor._cwid, instructor.name, instructor.department, 
+                            list(instructor._courses_students)[i], 
+                            list(instructor._courses_students.values())[i]])
+        print(pt)
+    
+    def print_majors_pt(self) -> None:
+        
+        """ Print a pretty table of majors """
+        
+        print('Majors Summary')
+        pt: PrettyTable = PrettyTable(field_names=['Major', 'Required Courses', 'Required Electives'])
+        
+        for major in self._majors.values():
+            pt.add_row([major.name, major.required_courses, major.required_electives])
+        
         print(pt)
 
 
@@ -220,17 +351,22 @@ def main() -> None:
     """ Allow the user to request to enter a _directory pathway and 
     display the information about the files """
     
-    univ_files: str = input("Please enter the _directory for your University's files:\n")
+    univ_files: str = input("Please enter the directory for your University's files:\n")
     try:
         univ: University = University(univ_files)
+        
     except ValueError as e:
         print(e)
+        
     except FileNotFoundError as e:
         print(e)
+        
     else:
         print('Please see results below...\n')
+        univ.print_majors_pt()
         univ.print_students_pt()
         univ.print_instructors_pt()
+    
     
 if __name__ == "__main__":
     main()
