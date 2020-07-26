@@ -74,27 +74,27 @@ class Major:
         self.required_courses: Set[str] = set()
         self.required_electives: Set[str] = set()
     
-    def _remaining_courses(self, courses: Dict[str, str], required_courses: Set[str]) -> Set[str]:
+    def _remaining_courses(self, courses: Dict[str, str]) -> Set[str]:
         
         """ Determine the remaining courses of a student based off of their major """
         
         passed_courses: Set[str] = set([key for key in courses if courses[key] in 
                                         ['A', 'A-', 'B+', 'B', 'B-', 'C+', 'C']])
         
-        return required_courses.difference(passed_courses)
+        return self.required_courses.difference(passed_courses)
     
-    def _remaining_electives(self, courses: Dict[str, str], required_electives: Set[str]) -> Set[str]: 
+    def _remaining_electives(self, courses: Dict[str, str]) -> Set[str]: 
         
         """ Determine the remaining electives of a student based off of their major """
         
         passed_courses: Set[str] = set([key for key in courses if courses[key] in 
                                         ['A', 'A-' 'B+', 'B', 'B-', 'C+', 'C']])
         
-        if len(passed_courses.intersection(required_electives)) > 0:
+        if len(passed_courses.intersection(self.required_electives)) > 0:
             return {}
           
         else:
-            return set(required_electives)
+            return set(self.required_electives)
         
     def _summary_pretty_table(self) -> PrettyTable:
         
@@ -116,13 +116,12 @@ class Student:
     
     """ Defines the attributes and methods of the Student class """
     
-    def __init__(self, cwid: str, name: str, major: Major) -> None:
+    def __init__(self, cwid: str, name: str) -> None:
         
         """ Define the attributes of a Student object """
         
         self._cwid: str = cwid
         self.name: str = name
-        self.major: Major = Major(major)
         self._courses_grades: Dict[str, str] = dict() #key: course name value: grade earned
         self._required_courses: Set[str] = set()
         self._required_electives: Set[str] = set()
@@ -202,7 +201,6 @@ class University:
             raise FileNotFoundError(f'{_directory} could not be opened.') from e
         
         self._majors: Dict[str, Major] = self._majors_information() #key: major name value: Major information
-        self.__process_majors()
         
         self._students: Dict[str, Student] = self._students_information() #key: cwid value: Student
         self._instructors: Dict[str, Instructor] = self._instructors_information() #key: cwid value: Instructor
@@ -217,25 +215,19 @@ class University:
         
         if 'majors.txt' in self._directory: 
             
-            for major in _file_reader('majors.txt', fields=3, sep='\t', header=True):
-                majors[major[0]] = Major(major[0])
-        
+            for major, require, course in _file_reader('majors.txt', fields=3, sep='\t', header=True):
+                if major not in majors:
+                    majors[major] = Major(major)
+                
+                if require == 'R':
+                    majors[major].required_courses.add(course)
+                    
+                if require == 'E':
+                    majors[major].required_electives.add(course)
         else:
             raise ValueError('The majors file does not exist. Please try again.')
                 
         return majors
-            
-    def __process_majors(self) -> None:
-        
-        """ Process information about the majors """
-        
-        for major in _file_reader('majors.txt', fields=3, sep='\t', header=True):
-            
-            if major[1] == 'R':
-                self._majors[major[0]].required_courses.add(major[2])
-                    
-            if major[1] == 'E':
-                self._majors[major[0]].required_electives.add(major[2])
                     
     def _students_information(self) -> Dict[str, Student]:
         
@@ -246,15 +238,15 @@ class University:
         if 'students.txt' in self._directory:
             
             for cwid, name, major in _file_reader('students.txt', fields=3, sep=';', header=True):
-                students[cwid] = Student(cwid, name, self._majors[major].name)
+                students[cwid] = Student(cwid, name)
+                
+                if major in self._majors:
+                    students[cwid].major = self._majors[major]
+                else:
+                    raise KeyError(f'An unexpected major was found: {major}')
                 
         else:
             raise ValueError('The students file does not exist. Please try again.')
-        
-        for student in students.values():
-            
-            student._required_courses = self._majors[student.major.name].required_courses
-            student._required_electives = self._majors[student.major.name].required_electives
                     
         return students
     
@@ -280,27 +272,27 @@ class University:
                  
         if 'grades.txt' in self._directory:
                 
-            for grade in _file_reader('grades.txt', fields=4, sep='|', header=True):
+            for student_cwid, course, grade, instructor_cwid  in _file_reader('grades.txt', fields=4, sep='|', header=True):
                 
-                if grade[0] not in self._students:
-                    raise ValueError(f'An unidentified student was found: {grade[0]}')
+                if student_cwid not in self._students:
+                    raise KeyError(f'An unidentified student was found: {student_cwid}')
                 
                 else:
-                    self._students[grade[0]]._courses_grades[grade[1]] = grade[2]
+                    self._students[student_cwid]._courses_grades[course] = grade
                             
-                if grade[3] not in self._instructors:
-                    raise ValueError(f'An unidentified instructor was found: {grade[3]}')
+                if instructor_cwid not in self._instructors:
+                    raise KeyError(f'An unidentified instructor was found: {instructor_cwid}')
                 
                 else:
-                    self._instructors[grade[3]]._courses_students[grade[1]] += 1
+                    self._instructors[instructor_cwid]._courses_students[course] += 1
                 
             for student in self._students.values():
                 
-                student._remaining_courses = student.major._remaining_courses(student._courses_grades, 
-                                                                              student._required_courses)
-                
-                student._remaining_electives = student.major._remaining_electives(student._courses_grades, 
-                                                                                  student._required_electives)                                                
+                student._completed_courses = set([key for key in student._courses_grades if student._courses_grades[key] in 
+                                                  ['A', 'A-', 'B+', 'B', 'B-', 'C+', 'C']])
+                student._remaining_courses = student.major._remaining_courses(student._courses_grades)
+                student._remaining_electives = student.major._remaining_electives(student._courses_grades)       
+                                                         
         else:
             raise ValueError('The grades file does not exist. Please try again.')
                   
@@ -313,7 +305,7 @@ class University:
                                                    'Remaining Electives', 'GPA'])
         
         for student in self._students.values():
-            pt.add_row([student._cwid, student.name, student.major.name, sorted(list(student._courses_grades)), 
+            pt.add_row([student._cwid, student.name, student.major.name, sorted(list(student._completed_courses)), 
                         student._remaining_courses, student._remaining_electives, student._calculate_gpa()])
             
         print(pt)   
@@ -359,6 +351,9 @@ def main() -> None:
         print(e)
         
     except FileNotFoundError as e:
+        print(e)
+    
+    except KeyError as e:
         print(e)
         
     else:

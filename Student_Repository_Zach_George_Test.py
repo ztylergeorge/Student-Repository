@@ -23,6 +23,7 @@ class UniversityTest(unittest.TestCase):
         missing_majors_path: str = 'C:/Users/Class2018/eclipse-workspace/HW09/src/Missing Majors'
         unknown_student_path: str = 'C:/Users/Class2018/eclipse-workspace/HW09/src/Unknown Student'
         unknown_instructor_path: str = 'C:/Users/Class2018/eclipse-workspace/HW09/src/Unknown Instructor'
+        unknown_major_path: str = 'C:/Users/Class2018/eclipse-workspace/HW09/src/Unknown Major'
         too_many_fields_path: str = 'C:/Users/Class2018/eclipse-workspace/HW09/src/Too Many Fields'
         
         with self.assertRaises(FileNotFoundError):
@@ -35,10 +36,12 @@ class UniversityTest(unittest.TestCase):
             University(missing_grades_path)
         with self.assertRaises(ValueError):
             University(missing_majors_path)
-        with self.assertRaises(ValueError):
+        with self.assertRaises(KeyError):
             University(unknown_student_path)
-        with self.assertRaises(ValueError):
+        with self.assertRaises(KeyError):
             University(unknown_instructor_path)
+        with self.assertRaises(KeyError):
+            University(unknown_major_path)
         with self.assertRaises(ValueError):
             University(too_many_fields_path)
             
@@ -69,6 +72,19 @@ class UniversityTest(unittest.TestCase):
                                             [str(98761), 'Edison, A', 'SYEN', {}],
                                             [str(98760), 'Darwin, C', 'SYEN', {'SYS 800': 1, 'SYS 750': 1, 'SYS 611': 2, 'SYS 645': 1}]
                                              ]
+        
+        students_completed_courses: List[List[str, Set[str]]] = [['10103', {'CS 501', 'SSW 564', 'SSW 567', 'SSW 687'}],
+                                                                 ['10115', {'CS 545', 'SSW 564', 'SSW 567', 'SSW 687'}],
+                                                                 ['10172', {'SSW 555', 'SSW 567'}],
+                                                                 ['10175', {'SSW 564', 'SSW 567', 'SSW 687'}],
+                                                                 ['10183', {'SSW 689'}],
+                                                                 ['11399', {'SSW 540'}],
+                                                                 ['11461', {'SYS 611', 'SYS 750', 'SYS 800'}],
+                                                                 ['11658', set()],
+                                                                 ['11714', {'SYS 611', 'SYS 645'}],
+                                                                 ['11788', {'SSW 540'}]
+                                                                 ]
+        
         students_missing_courses: List[List[str, Set[str]]] = [['10103', {'SSW 555', 'SSW 540'}],
                                                                  ['10115', {'SSW 540', 'SSW 555'}],
                                                                  ['10172', {'SSW 540', 'SSW 564'}],
@@ -95,6 +111,7 @@ class UniversityTest(unittest.TestCase):
                                          
         self.assertEqual([[student._cwid, student.name, student.major.name, student._courses_grades] for student in test_university._students.values()], students_info)
         self.assertEqual([[instructor._cwid, instructor.name, instructor.department, instructor._courses_students] for instructor in test_university._instructors.values()], instructors_info)
+        self.assertEqual([[student._cwid, student._completed_courses] for student in test_university._students.values()], students_completed_courses)
         self.assertEqual([[student._cwid, student._remaining_courses] for student in test_university._students.values()], students_missing_courses)
         self.assertEqual([[student._cwid, student._remaining_electives] for student in test_university._students.values()], students_missing_electives)
         
