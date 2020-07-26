@@ -109,11 +109,11 @@ class UniversityTest(unittest.TestCase):
                                                                  ['11788', {}]
                                                                  ]
                                          
-        self.assertEqual([[student._cwid, student.name, student.major.name, student._courses_grades] for student in test_university._students.values()], students_info)
-        self.assertEqual([[instructor._cwid, instructor.name, instructor.department, instructor._courses_students] for instructor in test_university._instructors.values()], instructors_info)
-        self.assertEqual([[student._cwid, student._completed_courses] for student in test_university._students.values()], students_completed_courses)
-        self.assertEqual([[student._cwid, student._remaining_courses] for student in test_university._students.values()], students_missing_courses)
-        self.assertEqual([[student._cwid, student._remaining_electives] for student in test_university._students.values()], students_missing_electives)
+        self.assertEqual([[student.cwid, student.name, student.major.name, student._courses_grades] for student in test_university._students.values()], students_info)
+        self.assertEqual([[instructor.cwid, instructor.name, instructor.department, instructor.courses_students] for instructor in test_university._instructors.values()], instructors_info)
+        self.assertEqual([[student.cwid, student.completed_courses] for student in test_university._students.values()], students_completed_courses)
+        self.assertEqual([[student.cwid, student.remaining_courses] for student in test_university._students.values()], students_missing_courses)
+        self.assertEqual([[student.cwid, student.remaining_electives] for student in test_university._students.values()], students_missing_electives)
         
                     
 if __name__ == '__main__':
