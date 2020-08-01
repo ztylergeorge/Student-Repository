@@ -5,7 +5,8 @@ Tests the classes and functions made in HW09
 '''
 
 import unittest 
-from typing import List, Any
+import sqlite3
+from typing import List, Any, Tuple
 from Student_Repository_Zach_George import University
 
 
@@ -51,69 +52,60 @@ class UniversityTest(unittest.TestCase):
         
         good_path: str = 'C:/Users/Class2018/eclipse-workspace/HW09/src/Files'
         
+        student_db: sqlite3.Connection = sqlite3.connect('C:/Users/Class2018/eclipse-workspace/HW09/src/Files/testing.db')
+        
+        query: str = """select s.Name, s.CWID, g.Course, g.Grade, i.Name
+                        from Students s join Grades g on s.CWID=g.StudentCWID
+                        join Instructors i on g.InstructorCWID=i.CWID"""
+        
         test_university: Universty = University(good_path)
         
-        students_info: List[List[Any]] = [[str(10103), 'Baldwin, C', 'SFEN', {'SSW 567': 'A', 'SSW 564': 'A-', 'SSW 687': 'B', 'CS 501': 'B'}],
-                                          [str(10115), 'Wyatt, X', 'SFEN', {'SSW 567': 'A', 'SSW 564': 'B+', 'SSW 687': 'A', 'CS 545': 'A'}],
-                                          [str(10172), 'Forbes, I', 'SFEN', {'SSW 555': 'A', 'SSW 567': 'A-'}],
-                                          [str(10175), 'Erickson, D', 'SFEN', {'SSW 567': 'A', 'SSW 564': 'A', 'SSW 687': 'B-'}],
-                                          [str(10183), 'Chapman, O', 'SFEN', {'SSW 689': 'A'}],
-                                          [str(11399), 'Cordova, I', 'SYEN', {'SSW 540': 'B'}],
-                                          [str(11461), 'Wright, U', 'SYEN', {'SYS 800': 'A', 'SYS 750': 'A-', 'SYS 611': 'A'}],
-                                          [str(11658), 'Kelly, P', 'SYEN', {'SSW 540': 'F'}],
-                                          [str(11714), 'Morton, A', 'SYEN', {'SYS 611': 'A', 'SYS 645': 'C'}],
-                                          [str(11788), 'Fuller, E', 'SYEN', {'SSW 540': 'A'}]
+        students_info: List[List[Any]] = [['10103', 'Jobs, S', 'SFEN', {'SSW 810': 'A-', 'CS 501': 'B'}],
+                                          ['10115', 'Bezos, J', 'SFEN', {'SSW 810': 'A', 'CS 546': 'F'}],
+                                          ['10183', 'Musk, E', 'SFEN', {'SSW 555': 'A', 'SSW 810': 'A'}],
+                                          ['11714', 'Gates, B', 'CS', {'SSW 810': 'B-', 'CS 546': 'A', 'CS 570': 'A-'}]
                                           ]
         
-        instructors_info: List[List[Any]] = [[str(98765), 'Einstein, A', 'SFEN', {'SSW 567': 4, 'SSW 540': 3}],
-                                            [str(98764), 'Feynman, R', 'SFEN', {'SSW 564': 3, 'SSW 687': 3, 'CS 501': 1, 'CS 545': 1}],
-                                            [str(98763), 'Newton, I', 'SFEN', {'SSW 555': 1, 'SSW 689': 1}],
-                                            [str(98762), 'Hawking, S', 'SYEN', {}],
-                                            [str(98761), 'Edison, A', 'SYEN', {}],
-                                            [str(98760), 'Darwin, C', 'SYEN', {'SYS 800': 1, 'SYS 750': 1, 'SYS 611': 2, 'SYS 645': 1}]
-                                             ]
+        instructors_info: List[List[Any]] = [['98764', 'Cohen, R', 'SFEN', {'CS 546': 1}],
+                                            ['98763', 'Rowland, J', 'SFEN', {'SSW 810': 4, 'SSW 555': 1}],
+                                            ['98762', 'Hawking, S', 'CS', {'CS 501': 1, 'CS 546': 1, 'CS 570': 1}]
+                                            ]
         
-        students_completed_courses: List[List[str, Set[str]]] = [['10103', {'CS 501', 'SSW 564', 'SSW 567', 'SSW 687'}],
-                                                                 ['10115', {'CS 545', 'SSW 564', 'SSW 567', 'SSW 687'}],
-                                                                 ['10172', {'SSW 555', 'SSW 567'}],
-                                                                 ['10175', {'SSW 564', 'SSW 567', 'SSW 687'}],
-                                                                 ['10183', {'SSW 689'}],
-                                                                 ['11399', {'SSW 540'}],
-                                                                 ['11461', {'SYS 611', 'SYS 750', 'SYS 800'}],
-                                                                 ['11658', set()],
-                                                                 ['11714', {'SYS 611', 'SYS 645'}],
-                                                                 ['11788', {'SSW 540'}]
+        students_completed_courses: List[List[str, Set[str]]] = [['10103', {'CS 501', 'SSW 810'}],
+                                                                 ['10115', {'SSW 810'}],
+                                                                 ['10183', {'SSW 555', 'SSW 810'}],
+                                                                 ['11714', {'CS 546', 'CS 570', 'SSW 810'}]
                                                                  ]
         
-        students_missing_courses: List[List[str, Set[str]]] = [['10103', {'SSW 555', 'SSW 540'}],
+        students_missing_courses: List[List[str, Set[str]]] = [['10103', {'SSW 540', 'SSW 555'}],
                                                                  ['10115', {'SSW 540', 'SSW 555'}],
-                                                                 ['10172', {'SSW 540', 'SSW 564'}],
-                                                                 ['10175', {'SSW 540', 'SSW 555'}], 
-                                                                 ['10183', {'SSW 540', 'SSW 555', 'SSW 564', 'SSW 567'}],
-                                                                 ['11399', {'SYS 612', 'SYS 671', 'SYS 800'}],
-                                                                 ['11461', {'SYS 612', 'SYS 671'}],
-                                                                 ['11658', {'SYS 612', 'SYS 671', 'SYS 800'}],
-                                                                 ['11714', {'SYS 612', 'SYS 671', 'SYS 800'}],
-                                                                 ['11788', {'SYS 612', 'SYS 671', 'SYS 800'}]
+                                                                 ['10183', {'SSW 540'}],
+                                                                 ['11714', {}]
                                                                  ]
         
         students_missing_electives: List[List[str, Set[str]]] = [['10103', {}],
-                                                                 ['10115', {}],
-                                                                 ['10172', {'CS 501', 'CS 513', 'CS 545'}],
-                                                                 ['10175', {'CS 501', 'CS 513', 'CS 545'}],
-                                                                 ['10183', {'CS 501', 'CS 513', 'CS 545'}],
-                                                                 ['11399', {}],
-                                                                 ['11461', {'SSW 540', 'SSW 565', 'SSW 810'}],
-                                                                 ['11658', {'SSW 540', 'SSW 565', 'SSW 810'}],
-                                                                 ['11714', {'SSW 540', 'SSW 565', 'SSW 810'}],
-                                                                 ['11788', {}]
+                                                                 ['10115', {'CS 501', 'CS 546'}],
+                                                                 ['10183', {'CS 501', 'CS 546'}],
+                                                                 ['11714', {}]
                                                                  ]
+        
+        students_grade_summary: List[Tuple[str, str, str, str, str]] = [('Jobs, S', '10103', 'SSW 810', 'A-', 'Rowland, J'),
+                                                                        ('Jobs, S', '10103', 'CS 501', 'B', 'Hawking, S'),
+                                                                        ('Bezos, J', '10115', 'SSW 810', 'A', 'Rowland, J'),
+                                                                        ('Bezos, J', '10115', 'CS 546', 'F', 'Hawking, S'),
+                                                                        ('Musk, E', '10183', 'SSW 555', 'A', 'Rowland, J'),
+                                                                        ('Musk, E', '10183', 'SSW 810', 'A', 'Rowland, J'),
+                                                                        ('Gates, B', '11714', 'SSW 810', 'B-', 'Rowland, J'),
+                                                                        ('Gates, B', '11714', 'CS 546', 'A', 'Cohen, R'),
+                                                                        ('Gates, B', '11714', 'CS 570', 'A-', 'Hawking, S'),
+                                                                        ]
                                          
-        self.assertEqual([[student.cwid, student.name, student.major.name, student._courses_grades] for student in test_university._students.values()], students_info)
-        self.assertEqual([[instructor.cwid, instructor.name, instructor.department, instructor.courses_students] for instructor in test_university._instructors.values()], instructors_info)
-        self.assertEqual([[student.cwid, student.completed_courses] for student in test_university._students.values()], students_completed_courses)
-        self.assertEqual([[student.cwid, student.remaining_courses] for student in test_university._students.values()], students_missing_courses)
-        self.assertEqual([[student.cwid, student.remaining_electives] for student in test_university._students.values()], students_missing_electives)
+        self.assertEqual([[student._cwid, student._name, student._major._name, student._courses_grades] for student in test_university._students.values()], students_info)
+        self.assertEqual([[instructor._cwid, instructor._name, instructor._department, instructor._courses_students] for instructor in test_university._instructors.values()], instructors_info)
+        self.assertEqual([[student._cwid, student._completed_courses] for student in test_university._students.values()], students_completed_courses)
+        self.assertEqual([[student._cwid, student._remaining_courses] for student in test_university._students.values()], students_missing_courses)
+        self.assertEqual([[student._cwid, student._remaining_electives] for student in test_university._students.values()], students_missing_electives)
+        self.assertEqual(students_grade_summary, [row for row in student_db.execute(query)])
         
                     
 if __name__ == '__main__':
