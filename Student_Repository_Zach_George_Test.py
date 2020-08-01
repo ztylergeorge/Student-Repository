@@ -52,7 +52,7 @@ class UniversityTest(unittest.TestCase):
         
         good_path: str = 'C:/Users/Class2018/eclipse-workspace/HW09/src/Files'
         
-        student_db: sqlite3.Connection = sqlite3.connect('C:/Users/Class2018/eclipse-workspace/HW09/src/Files/testing.db')
+        student_db: sqlite3.Connection = sqlite3.connect('C:/Users/Class2018/eclipse-workspace/HW09/src/Files/HW11_Zach_George.db')
         
         query: str = """select s.Name, s.CWID, g.Course, g.Grade, i.Name
                         from Students s join Grades g on s.CWID=g.StudentCWID
