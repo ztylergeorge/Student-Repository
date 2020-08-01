@@ -436,7 +436,7 @@ def main() -> None:
         univ.print_majors_pt()
         univ.print_students_pt()
         univ.print_instructors_pt()
-        univ.student_grades_table_db('C:/Users/Class2018/eclipse-workspace/HW09/src/Files/testing.db')
+        univ.student_grades_table_db('C:/Users/Class2018/eclipse-workspace/HW09/src/Files/HW11_Zach_George.db')
     
     
 if __name__ == "__main__":
