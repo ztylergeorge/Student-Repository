@@ -1,0 +1,21 @@
+{% extends 'base.html' %}
+{% block body %}
+<h2>{{ title }}</h2>
+<h3>{{ table_title }}</h3>
+<table>
+    <th>Student</th>
+    <th>CWID</th>
+    <th>Course</th>
+    <th>Grade</th>
+    <th>Instructor</th>
+    {% for report in reports %}
+        <tr>
+            <td>{{ report.student_name }}</td>
+            <td>{{ report.student_cwid }}</td>
+            <td>{{ report.course }}</td>
+            <td>{{ report.grade }}</td>
+            <td>{{ report.instructor_name }}</td>
+        </tr>
+    {% endfor %}
+</table>
+{% endblock %}
